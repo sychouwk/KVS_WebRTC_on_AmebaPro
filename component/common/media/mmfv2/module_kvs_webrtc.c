@@ -167,7 +167,9 @@ PVOID sendAudioPackets(PVOID args)
 
         frame.frameData = audio_buf.data_buf;
         frame.size = audio_buf.size;
-        frame.presentationTs = getEpochTimestampInHundredsOfNanos(&audio_buf.timestamp);
+        //frame.presentationTs = getEpochTimestampInHundredsOfNanos(&audio_buf.timestamp);
+        //frame.presentationTs = audio_buf.timestamp;
+        frame.presentationTs += SAMPLE_AUDIO_FRAME_DURATION;
         //printf("audio timestamp = %llu\n\r", frame.presentationTs);
 
         // wait for skb resource release
@@ -231,7 +233,7 @@ VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
     DLOGV("Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);   
 
     if( xQueueSendFromISR(audio_queue_recv, (void *)pFrame->frameData, NULL) != pdTRUE){
-        printf("\n\rAudio_sound queue full.\n\r");
+        DLOGD("\n\rAudio_sound queue full.\n\r");
     }
 
     PSampleStreamingSession pSampleStreamingSession = (PSampleStreamingSession) customData;
@@ -427,6 +429,7 @@ int kvs_webrtc_handle(void* p, void* input, void* output)
     {
         audio_buf_t audio_buf;
         audio_buf.size = input_item->size;
+        audio_buf.timestamp = input_item->timestamp;
 
         audio_buf.data_buf =  malloc( audio_buf.size );
         memcpy(audio_buf.data_buf, (uint8_t*)input_item->data_addr, audio_buf.size);

@@ -17,14 +17,14 @@ mm_mimo_t* mimo_1v_1a_webrtc_producer   = NULL;
 
 /*
  * !!!! Please set your AWS key and channel_name in example_kvs_webrtc.h for webrtc !!!!
- * !!!! Please set your AWS key, KVS_STREAM_NAME, AWS_KVS_REGION and ENABLE_IOT_CREDENTIAL in sample_config.h for producer !!!!
+ * !!!! Please set your AWS key, KVS_STREAM_NAME, AWS_KVS_REGION in sample_config.h for producer, ENABLE_IOT_CREDENTIAL is optional !!!!
 */
 
 /* set the video parameter here, it will overwrite the setting in example_kvs_webrtc.h and sample_config.h */
-#define WEBRTC_PRODUCER_MMF_VIDEO_WIDTH      1280
-#define WEBRTC_PRODUCER_MMF_VIDEO_HEIGHT     720
-#define WEBRTC_PRODUCER_MMF_VIDEO_BPS        256*1024
-#define WEBRTC_PRODUCER_MMF_VIDEO_FPS        15
+#define WEBRTC_PRODUCER_MMF_VIDEO_WIDTH      640
+#define WEBRTC_PRODUCER_MMF_VIDEO_HEIGHT     480
+#define WEBRTC_PRODUCER_MMF_VIDEO_BPS        128*1024
+#define WEBRTC_PRODUCER_MMF_VIDEO_FPS        30
 
 static isp_params_t isp_kvs_webrtc_params = {
 	.width    = WEBRTC_PRODUCER_MMF_VIDEO_WIDTH, 
@@ -57,7 +57,7 @@ void example_kvs_webrtc_producer_mmf_thread(void *param)
 
     isp_v1_ctx = mm_module_open(&isp_module);
     if(isp_v1_ctx){
-        mm_module_ctrl(isp_v1_ctx, CMD_ISP_SET_PARAMS, (int)&isp_v1_params);
+        mm_module_ctrl(isp_v1_ctx, CMD_ISP_SET_PARAMS, (int)&isp_kvs_webrtc_params);
         mm_module_ctrl(isp_v1_ctx, MM_CMD_SET_QUEUE_LEN, V1_SW_SLOT);
         mm_module_ctrl(isp_v1_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
         mm_module_ctrl(isp_v1_ctx, CMD_ISP_APPLY, 0);	// start channel 0
@@ -68,7 +68,7 @@ void example_kvs_webrtc_producer_mmf_thread(void *param)
 
     h264_v1_ctx = mm_module_open(&h264_module);
     if(h264_v1_ctx){
-        mm_module_ctrl(h264_v1_ctx, CMD_H264_SET_PARAMS, (int)&h264_v1_params);
+        mm_module_ctrl(h264_v1_ctx, CMD_H264_SET_PARAMS, (int)&h264_kvs_webrtc_params);
         mm_module_ctrl(h264_v1_ctx, MM_CMD_SET_QUEUE_LEN, V1_H264_QUEUE_LEN);
         mm_module_ctrl(h264_v1_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_DYNAMIC);
         mm_module_ctrl(h264_v1_ctx, CMD_H264_INIT_MEM_POOL, 0);

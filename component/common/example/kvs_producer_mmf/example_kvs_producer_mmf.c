@@ -16,7 +16,8 @@ mm_siso_t* siso_h264_kvs_v1             = NULL;
 mm_miso_t* miso_h264_aac_kvs_v1_a1      = NULL;
 
 /*
- * !!!! Please set your AWS key, KVS_STREAM_NAME, AWS_KVS_REGION, ENABLE_AUDIO_TRACK and ENABLE_IOT_CREDENTIAL in sample_config.h !!!!
+ * !!!! Please set your AWS key, KVS_STREAM_NAME, AWS_KVS_REGION in sample_config.h !!!!
+ * !!!! ENABLE_AUDIO_TRACK and ENABLE_IOT_CREDENTIAL is optional
 */
 
 /* set the video parameter here, it will overwrite the setting in sample_config.h */

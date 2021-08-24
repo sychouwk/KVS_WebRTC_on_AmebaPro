@@ -9,6 +9,7 @@
 #include "../media_framework/example_media_framework.h"
 #include "module_kvs_webrtc.h"
 #include "module_kvs_webrtc_audio.h"
+#include "../kvs_webrtc/example_kvs_webrtc.h"
 
 mm_context_t* kvs_webrtc_v1_a1_ctx      = NULL;
 mm_context_t* kvs_webrtc_audio_ctx      = NULL;
@@ -17,6 +18,7 @@ mm_siso_t* siso_webrtc_g711d            = NULL;
 
 /*
  * !!!! Please set your AWS key and channel_name in example_kvs_webrtc.h !!!!
+ * !!!! ENABLE_AUDIO_SENDRECV is optional
 */
 
 /* set the video parameter here, it will overwrite the setting in example_kvs_webrtc.h */
@@ -80,7 +82,7 @@ void example_kvs_webrtc_mmf_thread(void *param)
     audio_ctx = mm_module_open(&audio_module);
     if(audio_ctx){
         mm_module_ctrl(audio_ctx, CMD_AUDIO_SET_PARAMS, (int)&audio_params);
-        mm_module_ctrl(audio_ctx, CMD_AUDIO_SET_DAC_GAIN, (int)0x40);
+        mm_module_ctrl(audio_ctx, CMD_AUDIO_SET_DAC_GAIN, (int)0x80);
         mm_module_ctrl(audio_ctx, MM_CMD_SET_QUEUE_LEN, 6);
         mm_module_ctrl(audio_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
         mm_module_ctrl(audio_ctx, CMD_AUDIO_APPLY, 0);
