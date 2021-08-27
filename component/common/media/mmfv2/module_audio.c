@@ -554,6 +554,8 @@ void* audio_create(void* parent)
 	audio_ctx_t *ctx = malloc(sizeof(audio_ctx_t));
 	if(!ctx) return NULL;
 	
+    memset(ctx, 0, sizeof(audio_ctx_t));
+    
 	ctx->parent = parent;
 	
 	ctx->audio = malloc(sizeof(audio_t));

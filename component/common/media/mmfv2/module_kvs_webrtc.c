@@ -452,7 +452,7 @@ int kvs_webrtc_control(void *p, int cmd, int arg)
     switch(cmd){
 
     case CMD_KVS_WEBRTC_SET_APPLY:
-        if( xTaskCreate(kvs_webrtc_thread, ((const char*)"kvs_webrtc_thread"), STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS){
+        if( xTaskCreate(kvs_webrtc_thread, ((const char*)"kvs_webrtc_thread"), STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &ctx->kvs_webrtc_module_task) != pdPASS){
             printf("\n\r%s xTaskCreate(kvs_webrtc_thread) failed", __FUNCTION__);
         }
         break;
@@ -473,6 +473,7 @@ void* kvs_webrtc_destroy(void* p)
 {
     kvs_webrtc_ctx_t *ctx = (kvs_webrtc_ctx_t*)p;
     if(ctx) free(ctx);
+    if(ctx && ctx->kvs_webrtc_module_task) vTaskDelete(ctx->kvs_webrtc_module_task);
     return NULL;
 }
 
@@ -505,6 +506,9 @@ mm_module_t kvs_webrtc_module = {
     .destroy = kvs_webrtc_destroy,
     .control = kvs_webrtc_control,
     .handle = kvs_webrtc_handle,
+
+    .new_item = NULL,
+    .del_item = NULL,
 
     .output_type = MM_TYPE_NONE,        // output for video sink
     .module_type = MM_TYPE_AVSINK,      // module type is video algorithm

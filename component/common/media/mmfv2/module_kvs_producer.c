@@ -661,7 +661,7 @@ int kvs_producer_control(void *p, int cmd, int arg)
     switch(cmd){
 
     case CMD_KVS_PRODUCER_SET_APPLY:
-        if( xTaskCreate(kvs_producer_thread, ((const char*)"kvs_producer_thread"), 4096, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS){
+        if( xTaskCreate(kvs_producer_thread, ((const char*)"kvs_producer_thread"), 4096, NULL, tskIDLE_PRIORITY + 1, &ctx->kvs_producer_module_task) != pdPASS){
             printf("\n\r%s xTaskCreate(kvs_producer_thread) failed", __FUNCTION__);
         }
         break;
@@ -679,6 +679,7 @@ void* kvs_producer_destroy(void* p)
 {
     kvs_producer_ctx_t *ctx = (kvs_producer_ctx_t*)p;
     if(ctx) free(ctx);
+    if(ctx && ctx->kvs_producer_module_task) vTaskDelete(ctx->kvs_producer_module_task);
     return NULL;
 }
 
@@ -700,6 +701,9 @@ mm_module_t kvs_producer_module = {
     .destroy = kvs_producer_destroy,
     .control = kvs_producer_control,
     .handle = kvs_producer_handle,
+
+    .new_item = NULL,
+    .del_item = NULL,
 
     .output_type = MM_TYPE_NONE,    // output for video sink
     .module_type = MM_TYPE_VDSP,    // module type is video algorithm
