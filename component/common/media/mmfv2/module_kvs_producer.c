@@ -680,6 +680,9 @@ void* kvs_producer_destroy(void* p)
     kvs_producer_ctx_t *ctx = (kvs_producer_ctx_t*)p;
     if(ctx) free(ctx);
     if(ctx && ctx->kvs_producer_module_task) vTaskDelete(ctx->kvs_producer_module_task);
+    start_recording = 0;
+    initCamera_done = 0;
+    
     return NULL;
 }
 

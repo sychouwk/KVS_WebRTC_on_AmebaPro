@@ -1,6 +1,9 @@
 #ifndef _MODULE_KVS_PRODUCER_H
 #define _MODULE_KVS_PRODUCER_H
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "mmf2_module.h"
 
 #define CMD_KVS_PRODUCER_SET_PARAMS			MM_MODULE_CMD(0x00)
