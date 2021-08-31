@@ -10,6 +10,9 @@ void example_kvs_webrtc(void);
 /* Setting your signaling channel name */
 #define KVS_WEBRTC_CHANNEL_NAME "xxxxxxxxxxxxxxxxxxxx"
 
+/* Setting your AWS region */
+#define KVS_WEBRTC_REGION       "us-west-2"
+
 /* Cert path */
 #define TEMP_CERT_PATH          "0://cert.pem"
 

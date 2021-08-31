@@ -747,7 +747,7 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
         pSampleConfiguration->channelInfo.pRegion = DEFAULT_AWS_REGION;
     }
 #else
-    pSampleConfiguration->channelInfo.pRegion = DEFAULT_AWS_REGION;
+    pSampleConfiguration->channelInfo.pRegion = KVS_WEBRTC_REGION;
 #endif
 
     CHK_STATUS(lookForSslCert(&pSampleConfiguration));
