@@ -5520,6 +5520,7 @@
                                 <state>$PROJ_DIR$\..\..\..\lib_amazon\libusrsctp\usrsctplib</state>
                                 <state>$PROJ_DIR$\..\..\..\lib_amazon\libusrsctp\usrsctplib\netinet</state>
                                 <state>$PROJ_DIR$\..\..\..\lib_amazon\libusrsctp\usrsctplib\netinet6</state>
+                                <state>$PROJ_DIR$\..\..\..\lib_amazon\amazon-kinesis-video-streams-producer-embedded-c\src\include</state>
                             </option>
                             <option>
                                 <name>CCStdIncCheck</name>

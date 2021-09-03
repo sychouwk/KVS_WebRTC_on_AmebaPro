@@ -14,12 +14,12 @@ void example_kvs_webrtc(void);
 #define KVS_WEBRTC_REGION       "us-west-2"
 
 /* Cert path */
-#define TEMP_CERT_PATH          "0://cert.pem"
+#define TEMP_CERT_PATH          "0://cert.pem"  // path to CA cert
 
 /* log level */
 #define KVS_WEBRTC_LOG_LEVEL    LOG_LEVEL_WARN  //LOG_LEVEL_VERBOSE
 
-/* Video resolution setting */
+/* Video resolution setting (if using webrtc mmf example, please set video parameter in example_kvs_webrtc_mmf.c) */
 #include "sensor.h"
 #if SENSOR_USE == SENSOR_PS5270
     #define KVS_VIDEO_HEIGHT    VIDEO_1440SQR_HEIGHT
@@ -42,8 +42,35 @@ void example_kvs_webrtc(void);
 /* Enable two-way audio communication (not support opus format now)*/
 //#define ENABLE_AUDIO_SENDRECV
 
-/* (Not Ready Now) Enable data channel */
-//#define ENABLE_DATA_CHANNEL
+/*
+ * Testing Amazon KVS WebRTC with IAM user key is easy but it is not recommended.
+ * With AWS IoT Thing credentials, it can be managed more securely.(https://iotlabtpe.github.io/Amazon-KVS-WebRTC-WorkShop/lab/lab-4.html)
+ * Script for generate iot credential: https://github.com/awslabs/amazon-kinesis-video-streams-webrtc-sdk-c/blob/master/scripts/generate-iot-credential.sh
+ */
+#define ENABLE_KVS_WEBRTC_IOT_CREDENTIAL    0
+
+/* IoT credential configuration */
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+
+#define KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT      "xxxxxxxxxxxxxx.credentials.iot.us-west-2.amazonaws.com"  // IoT credentials endpointiot
+#define KVS_WEBRTC_ROLE_ALIAS                   "webrtc_iot_role_alias"  // IoT role alias
+#define KVS_WEBRTC_THING_NAME                   KVS_WEBRTC_CHANNEL_NAME  // iot thing name, recommended to be same as your channel name
+   
+#define KVS_WEBRTC_ROOT_CA \
+"-----BEGIN CERTIFICATE-----\n" \
+"......\n" \
+"-----END CERTIFICATE-----\n"
+
+#define KVS_WEBRTC_CERTIFICATE \
+"-----BEGIN CERTIFICATE-----\n" \
+"......\n" \
+"-----END CERTIFICATE-----\n"
+
+#define KVS_WEBRTC_PRIVATE_KEY \
+"-----BEGIN RSA PRIVATE KEY-----\n" \
+"......\n" \
+"-----END RSA PRIVATE KEY-----\n"
+#endif /* ENABLE_KVS_WEBRTC_IOT_CREDENTIAL */
 
 #endif /* _EXAMPLE_KVS_WEBRTC_H_ */
 

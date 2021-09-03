@@ -425,7 +425,7 @@ int kvs_webrtc_handle(void* p, void* input, void* output)
         else
             free(video_buf.output_buffer);
     }
-    else if (input_item->type == AV_CODEC_ID_PCMU)
+    else if ( (input_item->type == AV_CODEC_ID_PCMU) || (input_item->type == AV_CODEC_ID_PCMA) )
     {
         audio_buf_t audio_buf;
         audio_buf.size = input_item->size;

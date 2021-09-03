@@ -5,6 +5,7 @@
 #include "Samples.h"
 #include "fatfs_wrap.h"
 #include "example_kvs_webrtc.h"
+#include "kvs/iot_credential_provider.h"
 
 PSampleConfiguration gSampleConfiguration = NULL;
 
@@ -731,10 +732,7 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
 
     pAccessKey = KVS_WEBRTC_ACCESS_KEY;
     pSecretKey = KVS_WEBRTC_SECRET_KEY;
-    CHK_ERR(pAccessKey != NULL, STATUS_INVALID_OPERATION, "AWS_ACCESS_KEY_ID must be set");
-    CHK_ERR(pSecretKey != NULL, STATUS_INVALID_OPERATION, "AWS_SECRET_ACCESS_KEY must be set");
-    
-    
+
     pSessionToken = GETENV(SESSION_TOKEN_ENV_VAR);
     pSampleConfiguration->enableFileLogging = FALSE;
     #if 0
@@ -760,6 +758,32 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
     logLevel = KVS_WEBRTC_LOG_LEVEL;
 
     SET_LOGGER_LOG_LEVEL(logLevel);
+
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+    IotCredentialRequest_t xIotCredentialReq;
+    
+    xIotCredentialReq.pCredentialHost = KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT;
+    xIotCredentialReq.pRoleAlias = KVS_WEBRTC_ROLE_ALIAS;
+    xIotCredentialReq.pThingName = KVS_WEBRTC_THING_NAME;
+    xIotCredentialReq.pRootCA = KVS_WEBRTC_ROOT_CA;
+    xIotCredentialReq.pCertificate = KVS_WEBRTC_CERTIFICATE;
+    xIotCredentialReq.pPrivateKey = KVS_WEBRTC_PRIVATE_KEY;
+
+    IotCredentialToken_t *pToken = NULL;
+    Iot_credentialTerminate(pToken);
+
+    if ((pToken = Iot_getCredential(&xIotCredentialReq)) == NULL) {
+        printf("Failed to get Iot credential\r\n");
+    }
+    else {
+        pAccessKey = pToken->pAccessKeyId;
+        pSecretKey = pToken->pSecretAccessKey;
+        pSessionToken = pToken->pSessionToken;
+    }
+#endif
+
+    CHK_ERR(pAccessKey != NULL, STATUS_INVALID_OPERATION, "AWS_ACCESS_KEY_ID must be set");
+    CHK_ERR(pSecretKey != NULL, STATUS_INVALID_OPERATION, "AWS_SECRET_ACCESS_KEY must be set");
 
     CHK_STATUS(
         createStaticCredentialProvider(pAccessKey, 0, pSecretKey, 0, pSessionToken, 0, MAX_UINT64, &pSampleConfiguration->pCredentialProvider));

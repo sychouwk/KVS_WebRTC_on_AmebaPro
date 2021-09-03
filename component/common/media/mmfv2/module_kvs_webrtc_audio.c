@@ -40,7 +40,7 @@ void kvs_webrtc_audio_handler(void* p)
         if(xQueueReceive(mctx->output_recycle, &output_item, 0xFFFFFFFF) == pdTRUE){
             memcpy((void*)output_item->data_addr,(void*)audio_rev_buf, AUDIO_G711_FRAME_SIZE);
             output_item->size = AUDIO_G711_FRAME_SIZE;
-            output_item->type = AV_CODEC_ID_PCMU;
+            output_item->type = AUDIO_G711_MULAW ? AV_CODEC_ID_PCMU : AV_CODEC_ID_PCMA;
             xQueueSend(mctx->output_ready, (void*)&output_item, 0xFFFFFFFF);
         }
     }
