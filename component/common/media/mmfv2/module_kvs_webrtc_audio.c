@@ -27,21 +27,23 @@ extern xQueueHandle audio_queue_recv;
 void kvs_webrtc_audio_handler(void* p)
 {
     kvs_webrtc_audio_ctx_t *ctx = (kvs_webrtc_audio_ctx_t*)p;
-    
-    unsigned char audio_rev_buf[AUDIO_G711_FRAME_SIZE];
+
+    audio_buf_t audio_rev_buf;
 
     while (1)
     {
-        if(xQueueReceive(audio_queue_recv, audio_rev_buf, 0xFFFFFFFF) != pdTRUE)
+        if(xQueueReceive(audio_queue_recv, &audio_rev_buf, 0xFFFFFFFF) != pdTRUE)
             continue;	// should not happen
         
         mm_context_t *mctx = (mm_context_t*)ctx->parent;
         mm_queue_item_t* output_item;
         if(xQueueReceive(mctx->output_recycle, &output_item, 0xFFFFFFFF) == pdTRUE){
-            memcpy((void*)output_item->data_addr,(void*)audio_rev_buf, AUDIO_G711_FRAME_SIZE);
-            output_item->size = AUDIO_G711_FRAME_SIZE;
-            output_item->type = AUDIO_G711_MULAW ? AV_CODEC_ID_PCMU : AV_CODEC_ID_PCMA;
+            memcpy((void*)output_item->data_addr,(void*)audio_rev_buf.data_buf, audio_rev_buf.size);
+            output_item->size = audio_rev_buf.size;
+            output_item->type = audio_rev_buf.type;
+            output_item->timestamp = audio_rev_buf.timestamp;
             xQueueSend(mctx->output_ready, (void*)&output_item, 0xFFFFFFFF);
+            free(audio_rev_buf.data_buf);
         }
     }
 }
@@ -91,8 +93,8 @@ int kvs_webrtc_audio_handle(void* ctx, void* input, void* output)
 void* kvs_webrtc_audio_new_item(void *p)
 {
 	kvs_webrtc_audio_ctx_t *ctx = (kvs_webrtc_audio_ctx_t *)p;
-	
-    return (void*)malloc(AUDIO_G711_FRAME_SIZE*2);
+
+    return (void*)malloc(WEBRTC_AUDIO_FRAME_SIZE*2);
 }
 
 void* kvs_webrtc_audio_del_item(void *p, void *d)

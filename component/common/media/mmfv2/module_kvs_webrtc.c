@@ -140,6 +140,7 @@ typedef struct audio_buf_s{
     uint8_t *data_buf;
     uint8_t size;
     uint32_t timestamp;
+    uint32_t type;
 }audio_buf_t;
 
 PVOID sendAudioPackets(PVOID args)
@@ -230,9 +231,16 @@ CleanUp:
 VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
 {
     UNUSED_PARAM(customData);
-    DLOGV("Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);   
+    DLOGV("Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);
+    
+    audio_buf_t remote_audio;
+    remote_audio.data_buf = malloc(pFrame->size);
+    memcpy(remote_audio.data_buf, pFrame->frameData, pFrame->size);
+    remote_audio.size = pFrame->size;
+    remote_audio.timestamp = pFrame->presentationTs / HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
+    remote_audio.type =  AUDIO_G711_MULAW ? AV_CODEC_ID_PCMU : AV_CODEC_ID_PCMA;
 
-    if( xQueueSendFromISR(audio_queue_recv, (void *)pFrame->frameData, NULL) != pdTRUE){
+    if( xQueueSendFromISR(audio_queue_recv, (void *)&remote_audio, NULL) != pdTRUE){
         DLOGD("\n\rAudio_sound queue full.\n\r");
     }
 
@@ -492,7 +500,7 @@ void* kvs_webrtc_create(void* parent)
     
 #if ( defined(ENABLE_AUDIO_SENDRECV) && ( AUDIO_G711_MULAW || AUDIO_G711_ALAW ) )
     //Create a queue to receive the G711 audio frame from viewer
-    audio_queue_recv = xQueueCreate( KVS_QUEUE_DEPTH, AUDIO_G711_FRAME_SIZE);
+    audio_queue_recv = xQueueCreate( KVS_QUEUE_DEPTH, sizeof( audio_buf_t ) );
     xQueueReset(audio_queue_recv);
 #endif
 

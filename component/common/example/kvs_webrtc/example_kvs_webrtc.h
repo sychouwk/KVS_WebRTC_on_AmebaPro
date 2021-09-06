@@ -36,9 +36,6 @@ void example_kvs_webrtc(void);
 #define AUDIO_G711_ALAW         0
 #define AUDIO_OPUS              0
 
-/* Audio frame size */
-#define AUDIO_G711_FRAME_SIZE    160     // if sample rate=8kHz, frame duration=20ms. then, there is 8000/(1/0.02)=160 samples in one audio frame 
-
 /* Enable two-way audio communication (not support opus format now)*/
 //#define ENABLE_AUDIO_SENDRECV
 
