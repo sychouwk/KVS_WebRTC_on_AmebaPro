@@ -8,7 +8,6 @@
 
 #include "../media_framework/example_media_framework.h"
 #include "module_kvs_webrtc.h"
-#include "module_kvs_webrtc_audio.h"
 #include "../kvs_webrtc/example_kvs_webrtc.h"
 
 mm_context_t* kvs_webrtc_v1_a1_ctx      = NULL;
@@ -22,8 +21,8 @@ mm_siso_t* siso_webrtc_g711d            = NULL;
 */
 
 /* set the video parameter here, it will overwrite the setting in example_kvs_webrtc.h */
-#define WEBRTC_MMF_VIDEO_WIDTH      1280
-#define WEBRTC_MMF_VIDEO_HEIGHT     720
+#define WEBRTC_MMF_VIDEO_WIDTH      1920
+#define WEBRTC_MMF_VIDEO_HEIGHT     1080
 #define WEBRTC_MMF_VIDEO_BPS        512*1024
 #define WEBRTC_MMF_VIDEO_FPS        30
 
@@ -107,34 +106,13 @@ void example_kvs_webrtc_mmf_thread(void *param)
         mm_module_ctrl(kvs_webrtc_v1_a1_ctx, CMD_KVS_WEBRTC_SET_VIDEO_HEIGHT, WEBRTC_MMF_VIDEO_HEIGHT);
         mm_module_ctrl(kvs_webrtc_v1_a1_ctx, CMD_KVS_WEBRTC_SET_VIDEO_WIDTH, WEBRTC_MMF_VIDEO_WIDTH);
         mm_module_ctrl(kvs_webrtc_v1_a1_ctx, CMD_KVS_WEBRTC_SET_VIDEO_BPS, WEBRTC_MMF_VIDEO_BPS);
+        mm_module_ctrl(kvs_webrtc_v1_a1_ctx, MM_CMD_SET_QUEUE_LEN, 6);
+        mm_module_ctrl(kvs_webrtc_v1_a1_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
         mm_module_ctrl(kvs_webrtc_v1_a1_ctx, CMD_KVS_WEBRTC_SET_APPLY, 0);
     }else{
         rt_printf("KVS open fail\n\r");
         goto example_kvs_webrtc_mmf;
     }
-
-#ifdef ENABLE_AUDIO_SENDRECV
-    kvs_webrtc_audio_ctx = mm_module_open(&kvs_webrtc_audio_module);
-    if(kvs_webrtc_audio_ctx){
-        mm_module_ctrl(kvs_webrtc_audio_ctx, MM_CMD_SET_QUEUE_LEN, 6);
-		mm_module_ctrl(kvs_webrtc_audio_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
-        mm_module_ctrl(kvs_webrtc_audio_ctx, CMD_KVS_WEBRTC_SET_APPLY, 0);
-    }else{
-        rt_printf("kvs_webrtc_audio_ctx open fail\n\r");
-        goto example_kvs_webrtc_mmf;
-    }
-
-    g711d_ctx = mm_module_open(&g711_module);
-	if(g711d_ctx){
-		mm_module_ctrl(g711d_ctx, CMD_G711_SET_PARAMS, (int)&g711d_params);
-		mm_module_ctrl(g711d_ctx, MM_CMD_SET_QUEUE_LEN, 6);
-		mm_module_ctrl(g711d_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
-		mm_module_ctrl(g711d_ctx, CMD_G711_APPLY, 0);
-	}else{
-		rt_printf("G711 open fail\n\r");
-		goto example_kvs_webrtc_mmf;
-	}
-#endif
 
     siso_audio_g711e = siso_create();
     if(siso_audio_g711e){
@@ -156,10 +134,33 @@ void example_kvs_webrtc_mmf_thread(void *param)
         goto example_kvs_webrtc_mmf;
     }
 
+    miso_h264_g711_kvs_v1_a1 = miso_create();
+    if(miso_h264_g711_kvs_v1_a1){
+        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_INPUT0, (uint32_t)h264_v1_ctx, 0);
+        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_INPUT1, (uint32_t)g711e_ctx, 0);
+        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_OUTPUT, (uint32_t)kvs_webrtc_v1_a1_ctx, 0);
+        miso_start(miso_h264_g711_kvs_v1_a1);
+    }else{
+        rt_printf("miso_h264_g711_kvs_v1_a1 open fail\n\r");
+        goto example_kvs_webrtc_mmf;
+    }
+    rt_printf("miso started\n\r");
+    
 #ifdef ENABLE_AUDIO_SENDRECV  
+    g711d_ctx = mm_module_open(&g711_module);
+	if(g711d_ctx){
+		mm_module_ctrl(g711d_ctx, CMD_G711_SET_PARAMS, (int)&g711d_params);
+		mm_module_ctrl(g711d_ctx, MM_CMD_SET_QUEUE_LEN, 6);
+		mm_module_ctrl(g711d_ctx, MM_CMD_INIT_QUEUE_ITEMS, MMQI_FLAG_STATIC);
+		mm_module_ctrl(g711d_ctx, CMD_G711_APPLY, 0);
+	}else{
+		rt_printf("G711 open fail\n\r");
+		goto example_kvs_webrtc_mmf;
+	}
+
     siso_webrtc_g711d = siso_create();
 	if(siso_webrtc_g711d){
-		siso_ctrl(siso_webrtc_g711d, MMIC_CMD_ADD_INPUT, (uint32_t)kvs_webrtc_audio_ctx, 0);
+		siso_ctrl(siso_webrtc_g711d, MMIC_CMD_ADD_INPUT, (uint32_t)kvs_webrtc_v1_a1_ctx, 0);
 		siso_ctrl(siso_webrtc_g711d, MMIC_CMD_ADD_OUTPUT, (uint32_t)g711d_ctx, 0);
 		siso_start(siso_webrtc_g711d);
 	}else{
@@ -177,18 +178,6 @@ void example_kvs_webrtc_mmf_thread(void *param)
 		goto example_kvs_webrtc_mmf;
 	}
 #endif
-
-    miso_h264_g711_kvs_v1_a1 = miso_create();
-    if(miso_h264_g711_kvs_v1_a1){
-        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_INPUT0, (uint32_t)h264_v1_ctx, 0);
-        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_INPUT1, (uint32_t)g711e_ctx, 0);
-        miso_ctrl(miso_h264_g711_kvs_v1_a1, MMIC_CMD_ADD_OUTPUT, (uint32_t)kvs_webrtc_v1_a1_ctx, 0);
-        miso_start(miso_h264_g711_kvs_v1_a1);
-    }else{
-        rt_printf("miso_h264_g711_kvs_v1_a1 open fail\n\r");
-        goto example_kvs_webrtc_mmf;
-    }
-    rt_printf("miso started\n\r");
 
 example_kvs_webrtc_mmf:
 	

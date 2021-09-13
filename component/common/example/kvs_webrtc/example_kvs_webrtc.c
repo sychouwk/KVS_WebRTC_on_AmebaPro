@@ -601,7 +601,7 @@ VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
     memcpy((void*)buf_8bit_recv, (void*)pFrame->frameData, pFrame->size);    
 
     if (audio_init_done) {
-        if( xQueueSendFromISR(audio_queue_recv, (void *)buf_8bit_recv, NULL) != pdTRUE){
+        if( xQueueSend(audio_queue_recv, (void *)buf_8bit_recv, NULL) != pdTRUE){
             DLOGV("\n\rAudio_sound queue full.\n\r");
         }
     }

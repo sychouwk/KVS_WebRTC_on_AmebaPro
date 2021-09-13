@@ -31,6 +31,7 @@ extern PSampleConfiguration gSampleConfiguration;
 /* Config for Ameba-Pro */
 #define STACK_SIZE              20*1024
 #define KVS_QUEUE_DEPTH         20
+#define WEBRTC_AUDIO_FRAME_SIZE 160
 
 /* Network */
 #include <lwip_netconf.h>
@@ -50,11 +51,13 @@ extern int max_skb_buf_num;
 
 static xQueueHandle kvsWebrtcVideoQueue;
 static xQueueHandle kvsWebrtcAudioQueue;
-xQueueHandle audio_queue_recv;
+static xQueueHandle audio_queue_recv;
 
-int kvsWebrtcModule_video_H;
-int kvsWebrtcModule_video_W;
-int kvsWebrtcModule_video_bps;
+static int kvsWebrtcModule_video_H;
+static int kvsWebrtcModule_video_W;
+static int kvsWebrtcModule_video_bps;
+
+static kvs_webrtc_ctx_t *kvs_webrtc_ctx;
 
 PVOID sendVideoPackets(PVOID args)
 {
@@ -217,11 +220,25 @@ PVOID sampleReceiveAudioFrame(PVOID args)
         printf("[KVS Master] transceiverOnFrame(): operation returned status code: 0x%08x \n", retStatus);
         goto CleanUp;
     }
-    
-    //while (!ATOMIC_LOAD_BOOL(&pSampleStreamingSession->terminateFlag)) 
-    //{
-    //    vTaskDelay(1000);
-    //}
+
+    audio_buf_t audio_rev_buf;
+
+    while (!ATOMIC_LOAD_BOOL(&pSampleStreamingSession->terminateFlag)) 
+    {
+        if(xQueueReceive(audio_queue_recv, &audio_rev_buf, 0xFFFFFFFF) != pdTRUE)
+            continue;	// should not happen
+        
+        mm_context_t *mctx = (mm_context_t*)kvs_webrtc_ctx->parent;
+        mm_queue_item_t* output_item;
+        if(xQueueReceive(mctx->output_recycle, &output_item, 0xFFFFFFFF) == pdTRUE){
+            memcpy((void*)output_item->data_addr,(void*)audio_rev_buf.data_buf, audio_rev_buf.size);
+            output_item->size = audio_rev_buf.size;
+            output_item->type = audio_rev_buf.type;
+            output_item->timestamp = audio_rev_buf.timestamp;
+            xQueueSend(mctx->output_ready, (void*)&output_item, 0xFFFFFFFF);
+            free(audio_rev_buf.data_buf);
+        }
+    }
 
 CleanUp:
 
@@ -240,7 +257,7 @@ VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
     remote_audio.timestamp = pFrame->presentationTs / HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
     remote_audio.type =  AUDIO_G711_MULAW ? AV_CODEC_ID_PCMU : AV_CODEC_ID_PCMA;
 
-    if( xQueueSendFromISR(audio_queue_recv, (void *)&remote_audio, NULL) != pdTRUE){
+    if( xQueueSend(audio_queue_recv, (void *)&remote_audio, NULL) != pdTRUE){
         DLOGD("\n\rAudio_sound queue full.\n\r");
     }
 
@@ -320,7 +337,7 @@ static void kvs_webrtc_thread( void * param )
     // Set the video handlers
     pSampleConfiguration->videoSource = sendVideoPackets;
     pSampleConfiguration->audioSource = sendAudioPackets;
-#ifdef ENABLE_AUDIO_SENDRECV    
+#ifdef ENABLE_AUDIO_SENDRECV
     pSampleConfiguration->receiveAudioVideoSource = sampleReceiveAudioFrame;
 #endif
     pSampleConfiguration->mediaType = SAMPLE_STREAMING_AUDIO_VIDEO;
@@ -499,14 +516,28 @@ void* kvs_webrtc_create(void* parent)
     xQueueReset(kvsWebrtcAudioQueue);
     
 #if ( defined(ENABLE_AUDIO_SENDRECV) && ( AUDIO_G711_MULAW || AUDIO_G711_ALAW ) )
-    //Create a queue to receive the G711 audio frame from viewer
     audio_queue_recv = xQueueCreate( KVS_QUEUE_DEPTH, sizeof( audio_buf_t ) );
     xQueueReset(audio_queue_recv);
 #endif
-
+    
+    kvs_webrtc_ctx = ctx;
     printf("kvs_webrtc_create...\r\n");
 
     return ctx;
+}
+
+void* kvs_webrtc_new_item(void *p)
+{
+	kvs_webrtc_ctx_t *ctx = (kvs_webrtc_ctx_t *)p;
+
+    return (void*)malloc(WEBRTC_AUDIO_FRAME_SIZE*2);
+}
+
+void* kvs_webrtc_del_item(void *p, void *d)
+{
+	(void)p;
+    if(d) free(d);
+    return NULL;
 }
 
 mm_module_t kvs_webrtc_module = {
@@ -515,8 +546,8 @@ mm_module_t kvs_webrtc_module = {
     .control = kvs_webrtc_control,
     .handle = kvs_webrtc_handle,
 
-    .new_item = NULL,
-    .del_item = NULL,
+    .new_item = kvs_webrtc_new_item,
+    .del_item = kvs_webrtc_del_item,
 
     .output_type = MM_TYPE_NONE,        // output for video sink
     .module_type = MM_TYPE_AVSINK,      // module type is video algorithm
