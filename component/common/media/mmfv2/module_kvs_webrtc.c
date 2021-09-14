@@ -57,8 +57,6 @@ static int kvsWebrtcModule_video_H;
 static int kvsWebrtcModule_video_W;
 static int kvsWebrtcModule_video_bps;
 
-static kvs_webrtc_ctx_t *kvs_webrtc_ctx;
-
 PVOID sendVideoPackets(PVOID args)
 {
     STATUS retStatus = STATUS_SUCCESS;
@@ -221,25 +219,6 @@ PVOID sampleReceiveAudioFrame(PVOID args)
         goto CleanUp;
     }
 
-    audio_buf_t audio_rev_buf;
-
-    while (!ATOMIC_LOAD_BOOL(&pSampleStreamingSession->terminateFlag)) 
-    {
-        if(xQueueReceive(audio_queue_recv, &audio_rev_buf, 0xFFFFFFFF) != pdTRUE)
-            continue;	// should not happen
-        
-        mm_context_t *mctx = (mm_context_t*)kvs_webrtc_ctx->parent;
-        mm_queue_item_t* output_item;
-        if(xQueueReceive(mctx->output_recycle, &output_item, 0xFFFFFFFF) == pdTRUE){
-            memcpy((void*)output_item->data_addr,(void*)audio_rev_buf.data_buf, audio_rev_buf.size);
-            output_item->size = audio_rev_buf.size;
-            output_item->type = audio_rev_buf.type;
-            output_item->timestamp = audio_rev_buf.timestamp;
-            xQueueSend(mctx->output_ready, (void*)&output_item, 0xFFFFFFFF);
-            free(audio_rev_buf.data_buf);
-        }
-    }
-
 CleanUp:
 
     return (PVOID)(ULONG_PTR) retStatus;
@@ -266,6 +245,29 @@ VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
         pSampleStreamingSession->firstFrame = FALSE;
         pSampleStreamingSession->startUpLatency = (GETTIME() - pSampleStreamingSession->offerReceiveTime) / HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
         printf("Start up latency from offer to first frame: %" PRIu64 "ms\n", pSampleStreamingSession->startUpLatency);
+    }
+}
+
+static void kvs_webrtc_audio_thread( void * param )
+{
+    kvs_webrtc_ctx_t* ctx = (kvs_webrtc_ctx_t*)param;
+    audio_buf_t audio_rev_buf;
+
+    while (1)
+    {
+        if(xQueueReceive(audio_queue_recv, &audio_rev_buf, 0xFFFFFFFF) != pdTRUE)
+            continue;	// should not happen
+        
+        mm_context_t *mctx = (mm_context_t*)ctx->parent;
+        mm_queue_item_t* output_item;
+        if(xQueueReceive(mctx->output_recycle, &output_item, 0xFFFFFFFF) == pdTRUE){
+            memcpy((void*)output_item->data_addr,(void*)audio_rev_buf.data_buf, audio_rev_buf.size);
+            output_item->size = audio_rev_buf.size;
+            output_item->type = audio_rev_buf.type;
+            output_item->timestamp = audio_rev_buf.timestamp;
+            xQueueSend(mctx->output_ready, (void*)&output_item, 0xFFFFFFFF);
+            free(audio_rev_buf.data_buf);
+        }
     }
 }
 #endif /* ENABLE_AUDIO_SENDRECV */
@@ -428,6 +430,8 @@ fail:
     vTaskDelete(NULL);
 }
 
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int kvs_webrtc_handle(void* p, void* input, void* output)
@@ -480,6 +484,11 @@ int kvs_webrtc_control(void *p, int cmd, int arg)
         if( xTaskCreate(kvs_webrtc_thread, ((const char*)"kvs_webrtc_thread"), STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &ctx->kvs_webrtc_module_task) != pdPASS){
             printf("\n\r%s xTaskCreate(kvs_webrtc_thread) failed", __FUNCTION__);
         }
+#ifdef ENABLE_AUDIO_SENDRECV
+        if( xTaskCreate(kvs_webrtc_audio_thread, ((const char*)"kvs_webrtc_audio_thread"), 512, (void*)ctx, tskIDLE_PRIORITY + 1, &ctx->kvs_webrtc_module_audio_task) != pdPASS){
+            printf("\n\r%s xTaskCreate(kvs_webrtc_audio_thread) failed", __FUNCTION__);
+        }
+#endif
         break;
     case CMD_KVS_WEBRTC_SET_VIDEO_HEIGHT:
         kvsWebrtcModule_video_H = (int)arg;
@@ -499,6 +508,7 @@ void* kvs_webrtc_destroy(void* p)
     kvs_webrtc_ctx_t *ctx = (kvs_webrtc_ctx_t*)p;
     if(ctx) free(ctx);
     if(ctx && ctx->kvs_webrtc_module_task) vTaskDelete(ctx->kvs_webrtc_module_task);
+    if(ctx && ctx->kvs_webrtc_module_audio_task) vTaskDelete(ctx->kvs_webrtc_module_audio_task);
     return NULL;
 }
 
@@ -519,8 +529,7 @@ void* kvs_webrtc_create(void* parent)
     audio_queue_recv = xQueueCreate( KVS_QUEUE_DEPTH, sizeof( audio_buf_t ) );
     xQueueReset(audio_queue_recv);
 #endif
-    
-    kvs_webrtc_ctx = ctx;
+
     printf("kvs_webrtc_create...\r\n");
 
     return ctx;

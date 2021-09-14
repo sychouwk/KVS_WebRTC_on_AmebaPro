@@ -14,6 +14,7 @@ typedef struct kvs_webrtc_ctx_s
 {
     void* parent;
     TaskHandle_t    kvs_webrtc_module_task;
+    TaskHandle_t    kvs_webrtc_module_audio_task;
 
 }kvs_webrtc_ctx_t;
 
