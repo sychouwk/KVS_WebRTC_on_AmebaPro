@@ -639,6 +639,13 @@ in lwip_opt.h for support uart adapter*/
 
 /* For KVS WebRTC mmf module example*/
 #define CONFIG_EXAMPLE_KVS_WEBRTC_MMF           0
+#if CONFIG_EXAMPLE_KVS_WEBRTC
+#define CONFIG_FATFS_EN	1
+#if CONFIG_FATFS_EN
+// fatfs disk interface
+#define FATFS_DISK_SD 	1 // In AmebaPro C-cut QFN128, GPIOE_12 is low active to used to control SDIO power.
+#endif
+#endif
 
 /* For KVS Producer example*/
 #define CONFIG_EXAMPLE_KVS_PRODUCER             0

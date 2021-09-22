@@ -38,6 +38,13 @@ extern PSampleConfiguration gSampleConfiguration;
 #include "wifi_conf.h"
 #include <sntp/sntp.h>
 
+/* SD */
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+#include "disk_if/inc/sdcard.h"
+#include "fatfs_sdcard_api.h"
+static fatfs_sd_params_t fatfs_sd;
+#endif
+
 /* used to monitor skb resource */
 extern int skbbuf_used_num;
 extern int skbdata_used_num;
@@ -298,6 +305,15 @@ static int amebapro_platform_init(void)
     while( getEpochTimestampInHundredsOfNanos(NULL) < 10000000000000000ULL ){
         vTaskDelay( 200 / portTICK_PERIOD_MS );
     }
+    
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+    FRESULT res = fatfs_sd_init();
+    if(res < 0){
+        printf("fatfs_sd_init fail (%d)\n\r", res);
+        return -1;
+    }
+    fatfs_sd_get_param(&fatfs_sd);
+#endif
 
     return 0;
 }
@@ -427,6 +443,9 @@ CleanUp:
 
 fail:
 
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+    fatfs_sd_close();
+#endif
     vTaskDelete(NULL);
 }
 

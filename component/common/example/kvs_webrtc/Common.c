@@ -5,7 +5,6 @@
 #include "Samples.h"
 #include "fatfs_wrap.h"
 #include "example_kvs_webrtc.h"
-#include "kvs/iot_credential_provider.h"
 
 PSampleConfiguration gSampleConfiguration = NULL;
 
@@ -485,7 +484,8 @@ STATUS createSampleStreamingSession(PSampleConfiguration pSampleConfiguration, P
 
     pSampleStreamingSession->pSampleConfiguration = pSampleConfiguration;
     pSampleStreamingSession->rtcMetricsHistory.prevTs = GETTIME();
-    pSampleStreamingSession->remoteCanTrickleIce = FALSE;
+    // if we're the viewer, we control the trickle ice mode
+    pSampleStreamingSession->remoteCanTrickleIce = !isMaster && pSampleConfiguration->trickleIce;
     ATOMIC_STORE_BOOL(&pSampleStreamingSession->terminateFlag, FALSE);
     ATOMIC_STORE_BOOL(&pSampleStreamingSession->candidateGatheringDone, FALSE);
 
@@ -676,7 +676,7 @@ STATUS lookForSslCert(PSampleConfiguration* ppSampleConfiguration)
 //#else
 //    pSampleConfiguration->pCaCertPath = NULL;
 //#endif
-    pSampleConfiguration->pCaCertPath = TEMP_CERT_PATH;
+    pSampleConfiguration->pCaCertPath = KVS_WEBRTC_ROOT_CA_PATH;
     printf("cert path:%s \n", pSampleConfiguration->pCaCertPath);
     {
 
@@ -760,33 +760,15 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
     SET_LOGGER_LOG_LEVEL(logLevel);
 
 #if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
-    IotCredentialRequest_t xIotCredentialReq;
-    
-    xIotCredentialReq.pCredentialHost = KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT;
-    xIotCredentialReq.pRoleAlias = KVS_WEBRTC_ROLE_ALIAS;
-    xIotCredentialReq.pThingName = KVS_WEBRTC_THING_NAME;
-    xIotCredentialReq.pRootCA = KVS_WEBRTC_ROOT_CA;
-    xIotCredentialReq.pCertificate = KVS_WEBRTC_CERTIFICATE;
-    xIotCredentialReq.pPrivateKey = KVS_WEBRTC_PRIVATE_KEY;
-
-    IotCredentialToken_t *pToken = NULL;
-    Iot_credentialTerminate(pToken);
-
-    if ((pToken = Iot_getCredential(&xIotCredentialReq)) == NULL) {
-        printf("Failed to get Iot credential\r\n");
-    }
-    else {
-        pAccessKey = pToken->pAccessKeyId;
-        pSecretKey = pToken->pSecretAccessKey;
-        pSessionToken = pToken->pSessionToken;
-    }
-#endif
-
+    CHK_STATUS(createLwsIotCredentialProvider(KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT, KVS_WEBRTC_CERTIFICATE_PATH, KVS_WEBRTC_PRIVATE_KEY_PATH, KVS_WEBRTC_ROOT_CA_PATH,
+                                              KVS_WEBRTC_ROLE_ALIAS, KVS_WEBRTC_THING_NAME, &pSampleConfiguration->pCredentialProvider));
+#else
     CHK_ERR(pAccessKey != NULL, STATUS_INVALID_OPERATION, "AWS_ACCESS_KEY_ID must be set");
     CHK_ERR(pSecretKey != NULL, STATUS_INVALID_OPERATION, "AWS_SECRET_ACCESS_KEY must be set");
 
     CHK_STATUS(
         createStaticCredentialProvider(pAccessKey, 0, pSecretKey, 0, pSessionToken, 0, MAX_UINT64, &pSampleConfiguration->pCredentialProvider));
+#endif
 
     pSampleConfiguration->mediaSenderTid = INVALID_TID_VALUE;
     pSampleConfiguration->signalingClientHandle = INVALID_SIGNALING_CLIENT_HANDLE_VALUE;
@@ -1034,7 +1016,11 @@ STATUS freeSampleConfiguration(PSampleConfiguration* ppSampleConfiguration)
         CVAR_FREE(pSampleConfiguration->cvar);
     }
 
+#if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
+    freeIotCredentialProvider(&pSampleConfiguration->pCredentialProvider);
+#else
     freeStaticCredentialProvider(&pSampleConfiguration->pCredentialProvider);
+#endif
 
     if (pSampleConfiguration->iceCandidatePairStatsTimerId != MAX_UINT32) {
         CHK_STATUS(timerQueueCancelTimer(pSampleConfiguration->timerQueueHandle, pSampleConfiguration->iceCandidatePairStatsTimerId,

@@ -14,7 +14,7 @@ void example_kvs_webrtc(void);
 #define KVS_WEBRTC_REGION       "us-west-2"
 
 /* Cert path */
-#define TEMP_CERT_PATH          "0://cert.pem"  // path to CA cert
+#define KVS_WEBRTC_ROOT_CA_PATH "0://cert.pem"  // path to CA cert
 
 /* log level */
 #define KVS_WEBRTC_LOG_LEVEL    LOG_LEVEL_WARN  //LOG_LEVEL_VERBOSE
@@ -48,25 +48,11 @@ void example_kvs_webrtc(void);
 
 /* IoT credential configuration */
 #if ENABLE_KVS_WEBRTC_IOT_CREDENTIAL
-
-#define KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT      "xxxxxxxxxxxxxx.credentials.iot.us-west-2.amazonaws.com"  // IoT credentials endpointiot
-#define KVS_WEBRTC_ROLE_ALIAS                   "webrtc_iot_role_alias"  // IoT role alias
-#define KVS_WEBRTC_THING_NAME                   KVS_WEBRTC_CHANNEL_NAME  // iot thing name, recommended to be same as your channel name
-   
-#define KVS_WEBRTC_ROOT_CA \
-"-----BEGIN CERTIFICATE-----\n" \
-"......\n" \
-"-----END CERTIFICATE-----\n"
-
-#define KVS_WEBRTC_CERTIFICATE \
-"-----BEGIN CERTIFICATE-----\n" \
-"......\n" \
-"-----END CERTIFICATE-----\n"
-
-#define KVS_WEBRTC_PRIVATE_KEY \
-"-----BEGIN RSA PRIVATE KEY-----\n" \
-"......\n" \
-"-----END RSA PRIVATE KEY-----\n"
+    #define KVS_WEBRTC_IOT_CREDENTIAL_ENDPOINT      "xxxxxxxxxxxxxx.credentials.iot.us-west-2.amazonaws.com"  // IoT credentials endpointiot
+    #define KVS_WEBRTC_ROLE_ALIAS                   "webrtc_iot_role_alias"  // IoT role alias
+    #define KVS_WEBRTC_THING_NAME                   KVS_WEBRTC_CHANNEL_NAME  // iot thing name, recommended to be same as your channel name
+    #define KVS_WEBRTC_CERTIFICATE_PATH             "0://xxxxxxxxxxxxxx.pem"
+    #define KVS_WEBRTC_PRIVATE_KEY_PATH             "0://xxxxxxxxxxxxxx.key"
 #endif /* ENABLE_KVS_WEBRTC_IOT_CREDENTIAL */
 
 #endif /* _EXAMPLE_KVS_WEBRTC_H_ */
